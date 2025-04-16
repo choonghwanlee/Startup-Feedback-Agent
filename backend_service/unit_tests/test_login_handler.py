@@ -4,28 +4,46 @@ import json
 from login_handler import lambda_handler  # Replace with the correct import path
 
 class TestLoginHandler(unittest.TestCase):
+    """
+    Unit test suite for the login_handler Lambda function.
 
-    @patch("login_handler.boto3.resource")
+    This suite tests various login scenarios such as:
+    - Successful login with valid email and password
+    - Invalid login due to incorrect email
+    - Invalid login due to incorrect password
+
+    External dependencies like DynamoDB, bcrypt, and JWT are mocked to isolate logic.
+    """
+
+    @patch("login_handler.table")
     @patch("login_handler.bcrypt.checkpw")
     @patch("login_handler.jwt.encode")
-    def test_successful_login(self, mock_jwt_encode, mock_bcrypt_checkpw, mock_dynamodb_resource):
-        # Setup mocks
-        mock_dynamodb = MagicMock()
-        mock_dynamodb_resource.return_value = mock_dynamodb
-        mock_table = MagicMock()
-        mock_dynamodb.Table.return_value = mock_table
-        mock_bcrypt_checkpw.return_value = True
-        mock_jwt_encode.return_value = "mocked_jwt_token"
+    def test_successful_login(self, mock_jwt_encode, mock_bcrypt_checkpw, mock_table):
+        """
+        Test a successful login when the user provides correct email and password.
 
-        # Simulating a DynamoDB response with a valid user
+        Mocks:
+        - DynamoDB `get_item` returns a valid user record
+        - bcrypt password check returns True
+        - JWT token generation
+
+        Verifies:
+        - Status code is 200
+        - A JWT token is included in the response
+        """
+        # Configure the DynamoDB table mock to return a valid user
         mock_table.get_item.return_value = {
             "Item": {
                 "email": "john.doe@example.com",
                 "password": "hashed_password"
             }
         }
+        # Simulate correct password check:
+        mock_bcrypt_checkpw.return_value = True
+        # Simulate JWT generation:
+        mock_jwt_encode.return_value = "mocked_jwt_token"
 
-        # Sample event (successful login)
+        # Create a sample login event:
         event = {
             "httpMethod": "POST",
             "body": json.dumps({
@@ -35,18 +53,27 @@ class TestLoginHandler(unittest.TestCase):
         }
         context = {}
 
-        # Call lambda_handler
         response = lambda_handler(event, context)
-
-        # Asserts
         self.assertEqual(response["statusCode"], 200)
-        self.assertIn("token", json.loads(response["body"]))
-        mock_table.get_item.assert_called_once()
+        body = json.loads(response["body"])
+        self.assertIn("token", body)
+        self.assertEqual(body["token"], "mocked_jwt_token")
+
 
     @patch("login_handler.boto3.resource")
     @patch("login_handler.bcrypt.checkpw")
     @patch("login_handler.jwt.encode")
     def test_invalid_email(self, mock_jwt_encode, mock_bcrypt_checkpw, mock_dynamodb_resource):
+        """
+        Test login attempt with an invalid email.
+
+        Mocks:
+        - Simulates a response where no user is found in DynamoDB for the provided email
+
+        Verifies:
+        - Status code is 401
+        - Error message indicates invalid email or password
+        """
         # Setup mocks
         mock_dynamodb = MagicMock()
         mock_dynamodb_resource.return_value = mock_dynamodb
@@ -80,6 +107,16 @@ class TestLoginHandler(unittest.TestCase):
     @patch("login_handler.bcrypt.checkpw")
     @patch("login_handler.jwt.encode")
     def test_invalid_password(self, mock_jwt_encode, mock_bcrypt_checkpw, mock_dynamodb_resource):
+        """
+        Test login attempt with an incorrect password.
+
+        Mocks:
+        - Simulates a response with a valid user but incorrect password check
+
+        Verifies:
+        - Status code is 401
+        - Error message indicates invalid email or password
+        """
         # Setup mocks
         mock_dynamodb = MagicMock()
         mock_dynamodb_resource.return_value = mock_dynamodb

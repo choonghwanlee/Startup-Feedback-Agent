@@ -49,11 +49,24 @@ We use `unittests` and `coverage` to assess the quality of our code. For each of
 We can run the tests using:
 
 ```bash
-coverage run -m unittest discover
-coverage report
+coverage run -m unittest discover -s unit_tests
+coverage report -m
 ```
 
-Below are the results
+Below are the results:
+
+| File                                | Stmts | Miss | Cover   | Missing               |
+| ----------------------------------- | ----- | ---- | ------- | --------------------- |
+| `chat_handler.py`                   | 61    | 6    | 90%     | 24, 26, 44, 50–51, 94 |
+| `logger.py`                         | 16    | 0    | 100%    | —                     |
+| `login_handler.py`                  | 45    | 6    | 87%     | 52, 60, 75–76, 86–87  |
+| `signup_handler.py`                 | 43    | 4    | 91%     | 50, 84–86             |
+| `unit_tests/test_chat_handler.py`   | 66    | 1    | 98%     | 159                   |
+| `unit_tests/test_login_handler.py`  | 55    | 1    | 98%     | 113                   |
+| `unit_tests/test_signup_handler.py` | 60    | 1    | 98%     | 113                   |
+| **Total**                           | 346   | 19   | **95%** |                       |
+
+We pass all tests and have a 95% coverage!
 
 We also add docstrings for each function for better code quality and readability.
 

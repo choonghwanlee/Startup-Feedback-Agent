@@ -16,7 +16,20 @@ BEDROCK_AGENT_ALIAS_ID = os.getenv("BEDROCK_AGENT_ALIAS_ID", "your-alias-id")
 
 bedrock_agent = boto3.client("bedrock-agent-runtime")
 
+
 def verify_jwt(token):
+    """
+    Decodes and verifies a JWT token using the configured secret and algorithm.
+
+    Args:
+        token (str): JWT token to verify.
+
+    Returns:
+        dict: Decoded token payload if valid.
+
+    Raises:
+        Exception: If the token is expired or invalid.
+    """
     try:
         payload = jwt.decode(token, JWT_SECRET, algorithms=JWT_ALGORITHM)
         return payload
@@ -27,6 +40,16 @@ def verify_jwt(token):
 
 
 def _response(status_code, body):
+    """
+    Formats a standard HTTP response with appropriate headers for CORS.
+
+    Args:
+        status_code (int): HTTP status code.
+        body (dict): The response body content.
+
+    Returns:
+        dict: A formatted HTTP response.
+    """
     return {
         "statusCode": status_code,
         "headers": {
@@ -40,21 +63,37 @@ def _response(status_code, body):
 
 
 def lambda_handler(event, context):
+    """
+    AWS Lambda handler for a secure chat endpoint using Amazon Bedrock.
+
+    This function:
+    - Verifies JWT from the Authorization header.
+    - Sends user input to the Bedrock Agent for processing.
+    - Streams and returns the agent's completion response.
+
+    Args:
+        event (dict): Event data passed in by API Gateway.
+        context (object): Lambda context runtime information.
+
+    Returns:
+        dict: API Gateway-compatible HTTP response.
+    """
     if event["httpMethod"] == "OPTIONS":
         return _response(200, {"message": "Preflight OK"})
+
     try:
         headers = event.get("headers", {})
         auth_header = headers.get("authorization")
 
         if not auth_header or not auth_header.startswith("Bearer "):
-            logger.warning(f"Attempt to access protected endpoint with missing JWT Token!!!!")
+            logger.warning("Attempt to access protected endpoint with missing JWT Token!!!!")
             return _response(401, {"error": "Missing or invalid Authorization header"})
 
         token = auth_header.split(" ")[1]
         try:
             payload = verify_jwt(token)
         except Exception as jwt_error:
-            logger.warning(f"Attempt to access protected endpoint with invalid JWT Token!!!!")
+            logger.warning("Attempt to access protected endpoint with invalid JWT Token!!!!")
             return _response(401, {"error": str(jwt_error)})
 
         user_email = payload["email"]
@@ -83,6 +122,7 @@ def lambda_handler(event, context):
             endSession=end_session,
             memoryId=memory_id,
         )
+
         # Collect streaming response chunks
         completion = ""
         for event in response.get("completion", []):
@@ -91,10 +131,9 @@ def lambda_handler(event, context):
 
         refusal_msg = os.environ.get("BEDROCK_REFUSAL_MESSAGE")
         if refusal_msg and completion == refusal_msg:
-            logger.warning(f"Guardrail intervened in response generation!!!!")
-        
+            logger.warning("Guardrail intervened in response generation!!!!")
+
         return _response(200, {"response": completion})
     except Exception as e:
         logger.error(f"Handler error: {str(e)}")
         return _response(500, {"error": "Internal server error", "details": str(e)})
-        

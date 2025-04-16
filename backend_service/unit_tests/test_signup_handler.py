@@ -6,20 +6,32 @@ from botocore.exceptions import ClientError
 
 
 class TestSignupHandler(unittest.TestCase):
+    """
+    Unit tests for the signup_handler Lambda function.
+    Tests cover successful signups, missing input handling,
+    and duplicate user detection.
+    """
 
     @patch("signup_handler.boto3.resource")
     @patch("signup_handler.bcrypt.hashpw")
     @patch("signup_handler.jwt.encode")
-    def test_successful_signup(self, mock_jwt_encode, mock_bcrypt_hashpw, mock_dynamodb_resource):
-        # Setup mocks
-        mock_dynamodb = MagicMock()
-        mock_dynamodb_resource.return_value = mock_dynamodb
+    def test_successful_signup(self, mock_jwt_encode, mock_bcrypt_hashpw, mock_boto3_resource):
+        """
+        Test that a user can successfully sign up with valid data.
+        Ensures token is returned and item is inserted into DynamoDB.
+        """
+        # Mock the DynamoDB table and its method
         mock_table = MagicMock()
+        mock_dynamodb = MagicMock()
         mock_dynamodb.Table.return_value = mock_table
-        mock_bcrypt_hashpw.return_value = "hashed_password"
+        mock_boto3_resource.return_value = mock_dynamodb
+
+        mock_table.put_item.return_value = {}  # Simulate successful insert
+
+        # Mock bcrypt and jwt
+        mock_bcrypt_hashpw.return_value = b"hashed_password"
         mock_jwt_encode.return_value = "mocked_jwt_token"
 
-        # Sample event (successful signup)
         event = {
             "httpMethod": "POST",
             "body": json.dumps({
@@ -30,19 +42,20 @@ class TestSignupHandler(unittest.TestCase):
         }
         context = {}
 
-        # Call lambda_handler
         response = lambda_handler(event, context)
+        body = json.loads(response["body"])
 
-        # Asserts
         self.assertEqual(response["statusCode"], 200)
-        self.assertIn("token", json.loads(response["body"]))
+        self.assertIn("token", body)
         mock_table.put_item.assert_called_once()
 
     @patch("signup_handler.boto3.resource")
     @patch("signup_handler.bcrypt.hashpw")
     @patch("signup_handler.jwt.encode")
     def test_missing_parameters(self, mock_jwt_encode, mock_bcrypt_hashpw, mock_dynamodb_resource):
-        # Setup mocks
+        """
+        Test that missing required fields (e.g., password) return a 400 error.
+        """
         mock_dynamodb = MagicMock()
         mock_dynamodb_resource.return_value = mock_dynamodb
         mock_table = MagicMock()
@@ -50,7 +63,6 @@ class TestSignupHandler(unittest.TestCase):
         mock_bcrypt_hashpw.return_value = "hashed_password"
         mock_jwt_encode.return_value = "mocked_jwt_token"
 
-        # Sample event (missing parameters)
         event = {
             "httpMethod": "POST",
             "body": json.dumps({
@@ -59,10 +71,8 @@ class TestSignupHandler(unittest.TestCase):
         }
         context = {}
 
-        # Call lambda_handler
         response = lambda_handler(event, context)
 
-        # Asserts
         self.assertEqual(response["statusCode"], 400)
         self.assertIn("error", json.loads(response["body"]))
         self.assertEqual(json.loads(response["body"])["error"], "Email and password are required")
@@ -71,21 +81,24 @@ class TestSignupHandler(unittest.TestCase):
     @patch("signup_handler.bcrypt.hashpw")
     @patch("signup_handler.jwt.encode")
     def test_duplicate_user_signup(self, mock_jwt_encode, mock_bcrypt_hashpw, mock_dynamodb_resource):
-        # Setup mocks
+        """
+        Test that a duplicate user signup (same email) returns a 400 error.
+        Simulates DynamoDB conditional check failure.
+        """
         mock_dynamodb = MagicMock()
         mock_dynamodb_resource.return_value = mock_dynamodb
         mock_table = MagicMock()
         mock_dynamodb.Table.return_value = mock_table
-        mock_bcrypt_hashpw.return_value = "hashed_password"
+
+        mock_bcrypt_hashpw.return_value = b"hashed_password"
         mock_jwt_encode.return_value = "mocked_jwt_token"
         
-        # Simulate the duplicate email error
+        # Simulate ConditionalCheckFailedException from DynamoDB
         mock_table.put_item.side_effect = ClientError(
-            {"Error": {"Code": "ConditionalCheckFailedException"}},
-            "PutItem"
+            error_response={"Error": {"Code": "ConditionalCheckFailedException", "Message": "Duplicate"}}, 
+            operation_name="PutItem"
         )
 
-        # Sample event (duplicate user)
         event = {
             "httpMethod": "POST",
             "body": json.dumps({
@@ -96,13 +109,13 @@ class TestSignupHandler(unittest.TestCase):
         }
         context = {}
 
-        # Call lambda_handler
         response = lambda_handler(event, context)
+        body = json.loads(response["body"])
 
-        # Asserts
         self.assertEqual(response["statusCode"], 400)
-        self.assertIn("error", json.loads(response["body"]))
-        self.assertEqual(json.loads(response["body"])["error"], "User with this email already exists")
+        self.assertIn("error", body)
+        self.assertEqual(body["error"], "User with this email already exists")
+
 
 if __name__ == "__main__":
     unittest.main()

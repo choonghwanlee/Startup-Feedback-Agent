@@ -12,16 +12,23 @@ import hashlib
 load_dotenv()
 
 # === Config ===
-DYNAMODB_TABLE = os.getenv("DYNAMODB_TABLE")
-JWT_SECRET = os.getenv("JWT_SECRET")
-JWT_ALGORITHM = os.getenv("JWT_ALGORITHM")
+DYNAMODB_TABLE = os.getenv("DYNAMODB_TABLE", "dummy_table")
+JWT_SECRET = os.getenv("JWT_SECRET", "dummy_secret")
+JWT_ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
 JWT_EXPIRATION_HOURS = 24
-
-dynamodb = boto3.resource("dynamodb")
-table = dynamodb.Table(DYNAMODB_TABLE)
 
 
 def _response(status_code, body):
+    """
+    Constructs a standardized HTTP response with CORS headers.
+
+    Args:
+        status_code (int): HTTP status code to return.
+        body (dict): The response payload.
+
+    Returns:
+        dict: API Gateway-compatible HTTP response.
+    """
     return {
         "statusCode": status_code,
         "headers": {
@@ -35,17 +42,42 @@ def _response(status_code, body):
 
 
 def generate_jwt(email):
+    """
+    Generates a signed JSON Web Token (JWT) for the given email.
+
+    Args:
+        email (str): The email to encode in the JWT.
+
+    Returns:
+        str: A signed JWT string.
+    """
     payload = {
         "email": email,
         "sessionId": str(uuid.uuid4()),
         "exp": datetime.now() + timedelta(hours=JWT_EXPIRATION_HOURS),
         "iat": datetime.now(),
-        "sub": hashlib.sha256(email.strip().lower().encode('utf-8')).hexdigest()  # Or uuid if preferred
+        "sub": hashlib.sha256(email.strip().lower().encode('utf-8')).hexdigest()
     }
     return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
 
 
 def lambda_handler(event, context):
+    """
+    AWS Lambda handler for user registration.
+
+    Handles CORS preflight and POST requests to register a new user.
+    Hashes the password, stores user details in DynamoDB, and returns a JWT.
+
+    Args:
+        event (dict): The event payload from API Gateway.
+        context (object): Lambda context object.
+
+    Returns:
+        dict: API Gateway-compatible HTTP response.
+    """
+    dynamodb = boto3.resource("dynamodb")
+    table = dynamodb.Table(DYNAMODB_TABLE)
+
     if event["httpMethod"] == "OPTIONS":
         return _response(200, {"message": "Preflight OK"})
 
