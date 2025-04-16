@@ -1,0 +1,5 @@
+__pycache__/
+dependencies
+env
+.env
+local_tests/
