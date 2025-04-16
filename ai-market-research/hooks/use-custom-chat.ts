@@ -3,7 +3,7 @@
 import type React from "react"
 
 import { useState, useCallback, useRef } from "react"
-import { getToken } from "@/lib/auth-utils";
+import { getToken, logout } from "@/lib/auth-utils";
 
 export type Message = {
   id: string
@@ -78,6 +78,11 @@ export function useCustomChat(options: UseCustomChatOptions = {}) {
         });
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`)
+        }
+
+        if (endSession) {
+          setIsLoading(false)
+          logout();
         }
 
         const data = await response.json()
