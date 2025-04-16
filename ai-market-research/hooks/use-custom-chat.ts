@@ -37,7 +37,7 @@ export function useCustomChat(options: UseCustomChatOptions = {}) {
     async (e: React.FormEvent<HTMLFormElement>) => {
       e.preventDefault()
       if (!input.trim()) return
-
+      const endSession = input === 'end';
       const accessToken = getToken();
       console.log("Access Token:", accessToken);
       if (!accessToken) {
@@ -73,6 +73,7 @@ export function useCustomChat(options: UseCustomChatOptions = {}) {
           },
           body: JSON.stringify({
             input: userMessage.content,
+            endSession: endSession,
           }),
         });
         if (!response.ok) {

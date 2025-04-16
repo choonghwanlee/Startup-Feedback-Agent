@@ -66,6 +66,7 @@ def lambda_handler(event, context):
 
         body = json.loads(event.get("body", "{}"))
         user_input = body.get("input")
+        end_session = body.get("endSession", False)
 
         if not user_input:
             return _response(400, {"error": "Missing 'input' field"})
@@ -78,6 +79,7 @@ def lambda_handler(event, context):
             sessionId=session_id,
             inputText=user_input,
             enableTrace=False,
+            endSession=end_session,
             sessionState={
                 "sessionAttributes": {
                     "memoryId": memory_id
