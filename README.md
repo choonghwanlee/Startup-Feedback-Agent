@@ -1,6 +1,8 @@
 # Startup-Feedback-Agent
 
-A web search agent that can help you do market research for your startup idea
+A web search agent that can help you do market research for your startup idea.
+
+You can find the deployed app [here](https://startup-feedback-agent.vercel.app/)
 
 ## Incorporation of each week's elements:
 
@@ -276,7 +278,7 @@ After each of the Lambda functions are deployed, you can deploy them with AWS AP
 
 ### User Manual
 
-Once you enter the app via the [landing page](), you can navigate to login/signup via the buttons on the top right corner of the screen. Create a new account if you don't have an account, or log in with your previous credentials.
+Once you enter the app via the [landing page](https://startup-feedback-agent.vercel.app/), you can navigate to login/signup via the buttons on the top right corner of the screen. Create a new account if you don't have an account, or log in with your previous credentials.
 
 Then, you will be navigated to a chat interface where you can ask questions about your startup. At first, specify clearly what your idea is, and state a question you want answered. The chatbot might ask you clarifying questions for more clarity. The more questions you answer, the more fine-grained the chatbot responses will be. But it's not strictly mandatory for you to answer the chatbot's clarifying questions: you can just tell it to make assumptions wherever you want it to.
 
