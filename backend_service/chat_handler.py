@@ -80,11 +80,7 @@ def lambda_handler(event, context):
             inputText=user_input,
             enableTrace=False,
             endSession=end_session,
-            sessionState={
-                "sessionAttributes": {
-                    "memoryId": memory_id
-                }
-            }
+            memoryId=memory_id,
         )
         # Collect streaming response chunks
         completion = ""

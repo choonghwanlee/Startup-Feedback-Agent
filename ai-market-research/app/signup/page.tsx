@@ -32,9 +32,6 @@ export default function SignupPage() {
     const email = formData.get("email") as string;
     const password = formData.get("password") as string;
     const name = formData.get("name") as string;
-    console.log(email);
-    console.log(name);
-    console.log(password);
 
     if (!name || !email || !password) {
       setError("Please fill in all required fields");
