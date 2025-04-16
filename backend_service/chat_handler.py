@@ -59,6 +59,7 @@ def lambda_handler(event, context):
 
         user_email = payload["email"]
         session_id = payload.get("sessionId")
+        memory_id = payload.get("sub")
         logger.info(f"User {user_email} invoking chat endpoint with session {session_id}")
 
         if not session_id:
@@ -71,7 +72,7 @@ def lambda_handler(event, context):
         if not user_input:
             return _response(400, {"error": "Missing 'input' field"})
 
-        memory_id = f"memory-{user_email}"
+        memory_id = f"memory-{memory_id}"
 
         response = bedrock_agent.invoke_agent(
             agentId=BEDROCK_AGENT_ID,

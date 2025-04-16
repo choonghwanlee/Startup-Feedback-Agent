@@ -7,6 +7,7 @@ from botocore.exceptions import ClientError
 import uuid
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
+import hashlib
 
 load_dotenv()
 
@@ -39,7 +40,7 @@ def generate_jwt(email):
         "sessionId": str(uuid.uuid4()),
         "exp": datetime.now() + timedelta(hours=JWT_EXPIRATION_HOURS),
         "iat": datetime.now(),
-        "sub": email,
+        "sub": hashlib.sha256(email.strip().lower().encode('utf-8')).hexdigest()  # Or uuid if preferred
     }
     return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
 

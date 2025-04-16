@@ -80,12 +80,13 @@ export function useCustomChat(options: UseCustomChatOptions = {}) {
           throw new Error(`HTTP error! status: ${response.status}`)
         }
 
+        const data = await response.json()
+  
         if (endSession) {
           setIsLoading(false)
           logout();
         }
 
-        const data = await response.json()
 
         setMessages((messages) =>
           messages.map((message) =>
